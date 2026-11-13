@@ -602,41 +602,88 @@ document.getElementById("languageButton").addEventListener("click", () => {
 
 document.getElementById("teamMessageForm").addEventListener("submit", async event => {
   event.preventDefault();
+  const formElement = event.currentTarget;
   const input = document.getElementById("teamMessageInput");
+  const submitButton = formElement.querySelector('button[type="submit"]');
   const text = input.value.trim();
-  if (!text) return;
+  if (!text || submitButton.disabled) return;
+  submitButton.disabled = true;
   if (cloudMode) {
-    try { await backend.sendMessage(currentTeam.id, text); await loadCloudWorkspace({ preserveView: true }); }
-    catch (error) { showToast(error.message); return; }
+    try {
+      const created = await backend.sendMessage(currentTeam.id, text);
+      input.value = "";
+      state.messages.push({
+        id: created.id,
+        userId: cloudUser.id,
+        author: currentUserName,
+        initials: nameInitials(currentUserName),
+        color: "avatar-blue",
+        time: t("justNow"),
+        textZh: text,
+        textEn: text,
+        mine: true
+      });
+      renderMessages();
+      submitButton.disabled = false;
+      showToast(t("messageSent"));
+      loadCloudWorkspace({ preserveView: true }).catch(error => showToast(error.message));
+      return;
+    } catch (error) {
+      showToast(error.message);
+      submitButton.disabled = false;
+      return;
+    }
   } else {
     state.messages.push({ id: Date.now(), author: "Samuel", initials: "SL", color: "avatar-blue", time: t("justNow"), textZh: text, textEn: text, mine: true });
     saveState(); renderMessages();
+    input.value = "";
   }
-  input.value = ""; showToast(t("messageSent"));
+  submitButton.disabled = false;
+  showToast(t("messageSent"));
 });
 
 document.getElementById("createEventForm").addEventListener("submit", async event => {
   event.preventDefault();
-  const form = new FormData(event.currentTarget);
+  const formElement = event.currentTarget;
+  const submitButton = formElement.querySelector('button[type="submit"]');
+  if (submitButton.disabled) return;
+  const form = new FormData(formElement);
   const title = String(form.get("title") || "").trim();
   const date = String(form.get("date") || "");
   const startTime = String(form.get("startTime") || "");
   const venue = String(form.get("venue") || "").trim();
   if (!title || !date || !startTime || !venue) { showToast(t("fieldRequired")); return; }
+  submitButton.disabled = true;
   let id;
   if (cloudMode) {
     try {
       const created = await backend.createEvent(currentTeam.id, { type: form.get("type"), title, date, meetTime: form.get("meetTime") || startTime, startTime, venue, notes: form.get("notes") || "" });
       id = created.id;
+      formElement.reset();
+      submitButton.disabled = false;
+      closeCreateEvent();
+      showToast(t("eventCreated"));
       await loadCloudWorkspace({ preserveView: true });
-    } catch (error) { showToast(error.message); return; }
+      renderAll();
+      openEvent(id);
+      return;
+    } catch (error) {
+      showToast(error.message);
+      submitButton.disabled = false;
+      return;
+    }
   } else {
     id = `event-${Date.now()}`;
     state.events.push({ id, type: form.get("type"), titleZh: title, titleEn: title, date, meetTime: form.get("meetTime") || startTime, startTime, endTime: "", venue, notesZh: form.get("notes") || "", notesEn: form.get("notes") || "", status: "confirmed", attendance: Object.fromEntries(state.members.map(member => [member.name, member.name === "Samuel" ? "going" : "pending"])) });
     state.threads[id] = [];
     saveState();
   }
-  event.currentTarget.reset(); closeCreateEvent(); renderAll(); showToast(t("eventCreated")); openEvent(id);
+  formElement.reset();
+  submitButton.disabled = false;
+  closeCreateEvent();
+  renderAll();
+  showToast(t("eventCreated"));
+  openEvent(id);
 });
 
 document.addEventListener("submit", async event => {
@@ -644,18 +691,32 @@ document.addEventListener("submit", async event => {
   if (!form) return;
   event.preventDefault();
   const input = form.elements.message;
+  const submitButton = form.querySelector('button[type="submit"]');
   const text = input.value.trim();
-  if (!text) return;
+  if (!text || submitButton.disabled) return;
+  submitButton.disabled = true;
   const eventId = form.dataset.eventThreadForm;
   if (cloudMode) {
-    try { await backend.sendMessage(currentTeam.id, text, eventId); await loadCloudWorkspace({ preserveView: true }); }
-    catch (error) { showToast(error.message); return; }
+    try {
+      await backend.sendMessage(currentTeam.id, text, eventId);
+      input.value = "";
+      submitButton.disabled = false;
+      showToast(t("messageSent"));
+      loadCloudWorkspace({ preserveView: true }).catch(error => showToast(error.message));
+      return;
+    } catch (error) {
+      showToast(error.message);
+      submitButton.disabled = false;
+      return;
+    }
   } else {
     state.threads[eventId] ||= [];
     state.threads[eventId].push({ author: "Samuel", initials: "SL", color: "avatar-blue", time: t("justNow"), textZh: text, textEn: text });
     saveState(); renderEventDetail(eventId);
   }
-  input.value = ""; showToast(t("messageSent"));
+  input.value = "";
+  submitButton.disabled = false;
+  showToast(t("messageSent"));
 });
 
 document.getElementById("memberSearch").addEventListener("input", event => renderMembers(event.target.value));
