@@ -1,5 +1,9 @@
 const STORAGE_KEY = "teamup-prototype-state-v1";
 const LANGUAGE_KEY = "teamup-prototype-language";
+const TEAM_KEY = "teamup-active-team";
+const backend = window.TeamUpBackend;
+const CLOUD_PREVIEW = new URLSearchParams(location.search).get("cloud") === "1";
+const cloudMode = Boolean(backend?.configured && CLOUD_PREVIEW);
 
 const translations = {
   zh: {
@@ -27,7 +31,7 @@ const translations = {
     eventDiscussion: "活動討論", discussionHelp: "只討論今次活動，資料唔會畀其他Chat沖走。", attendance: "出席名單",
     addCalendar: "加入月曆", share: "分享活動", send: "發送", noMessages: "未有討論。", eventCreated: "活動已建立",
     inviteCopied: "邀請連結已複製", responseSaved: "出席回覆已更新", messageSent: "訊息已發送", demoReset: "Demo已重設",
-    fieldRequired: "請填寫活動名稱、日期、時間及場地。", copied: "已複製", justNow: "剛剛", admin: "管理員", member: "隊員", coach: "教練"
+    fieldRequired: "請填寫活動名稱、日期、時間及場地。", copied: "已複製", justNow: "剛剛", admin: "管理員", captain: "隊長", finance: "財務", member: "隊員", coach: "教練"
   },
   en: {
     home: "Home", chat: "Team Chat", chatShort: "Chat", calendar: "Calendar", team: "Team", create: "Create",
@@ -54,7 +58,7 @@ const translations = {
     eventDiscussion: "Event discussion", discussionHelp: "Keep this conversation connected to the event.", attendance: "Attendance",
     addCalendar: "Add to calendar", share: "Share event", send: "Send", noMessages: "No discussion yet.", eventCreated: "Event created",
     inviteCopied: "Invite link copied", responseSaved: "Attendance updated", messageSent: "Message sent", demoReset: "Demo reset",
-    fieldRequired: "Please complete the title, date, time and venue.", copied: "Copied", justNow: "Just now", admin: "Admin", member: "Member", coach: "Coach"
+    fieldRequired: "Please complete the title, date, time and venue.", copied: "Copied", justNow: "Just now", admin: "Admin", captain: "Captain", finance: "Finance", member: "Member", coach: "Coach"
   }
 };
 
@@ -114,6 +118,12 @@ const initialState = () => ({
 let state = loadState();
 let language = localStorage.getItem(LANGUAGE_KEY) || "zh";
 let toastTimer;
+let cloudUser = null;
+let currentTeam = null;
+let currentRole = "admin";
+let currentUserName = "Samuel";
+let unsubscribeCloud = null;
+let cloudLoadPromise = null;
 
 function loadState() {
   try {
@@ -125,6 +135,7 @@ function loadState() {
 }
 
 function saveState() {
+  if (cloudMode) return;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
@@ -156,6 +167,7 @@ function applyTranslations() {
   });
   document.getElementById("languageButton").textContent = language === "zh" ? "EN" : "繁";
   renderAll();
+  renderCloudContext();
 }
 
 function formatEventDate(dateString, style = "short") {
@@ -190,6 +202,8 @@ function renderAll() {
 
 function renderFeaturedEvent() {
   const event = state.events[0];
+  const card = document.getElementById("featuredEventCard");
+  card.hidden = !event;
   if (!event) return;
   const counts = statusCounts(event);
   document.querySelector("[data-featured-title]").textContent = eventTitle(event);
@@ -209,7 +223,12 @@ function renderFeaturedEvent() {
 
 function renderUpcomingEvents() {
   const container = document.getElementById("upcomingEventsList");
-  container.innerHTML = state.events.slice(1, 4).map(event => {
+  const upcoming = state.events.slice(1, 4);
+  if (!upcoming.length) {
+    container.innerHTML = `<p class="empty-state">${language === "zh" ? "未有其他活動。" : "No other events yet."}</p>`;
+    return;
+  }
+  container.innerHTML = upcoming.map(event => {
     const date = new Date(`${event.date}T12:00:00`);
     return `<article class="upcoming-row" data-action="open-event" data-event-id="${escapeHtml(event.id)}">
       <div class="mini-date"><strong>${date.getDate()}</strong><span>${new Intl.DateTimeFormat("en", { month: "short" }).format(date).toUpperCase()}</span></div>
@@ -221,7 +240,7 @@ function renderUpcomingEvents() {
 
 function renderCalendar() {
   const agenda = document.getElementById("calendarAgenda");
-  agenda.innerHTML = state.events.map(event => {
+  agenda.innerHTML = state.events.length ? state.events.map(event => {
     const date = new Date(`${event.date}T12:00:00`);
     const counts = statusCounts(event);
     return `<article class="agenda-card" data-action="open-event" data-event-id="${escapeHtml(event.id)}">
@@ -229,15 +248,24 @@ function renderCalendar() {
       <div><span class="event-tag">${escapeHtml(typeLabel(event.type))}</span><h3>${escapeHtml(eventTitle(event))}</h3><p>${escapeHtml(event.startTime)}–${escapeHtml(event.endTime || "")} · ${escapeHtml(event.venue)}</p></div>
       <div class="agenda-attendance">✓ ${counts.going} ${escapeHtml(t("going"))}</div>
     </article>`;
-  }).join("");
+  }).join("") : `<div class="panel empty-panel">${language === "zh" ? "未有活動。隊長可以建立第一個活動。" : "No events yet. A captain can create the first one."}</div>`;
 
   const grid = document.getElementById("calendarMonthGrid");
   const dayNames = language === "zh" ? ["一","二","三","四","五","六","日"] : ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
   let cells = dayNames.map(day => `<div class="month-cell header">${day}</div>`).join("");
-  const leading = 6;
-  for (let i = 0; i < leading; i++) cells += `<div class="month-cell outside">${26 + i}</div>`;
-  for (let day = 1; day <= 30; day++) {
-    const event = state.events.find(item => new Date(`${item.date}T12:00:00`).getDate() === day && item.date.startsWith("2026-11"));
+  const focusDate = state.events[0] ? new Date(`${state.events[0].date}T12:00:00`) : new Date();
+  const year = focusDate.getFullYear();
+  const month = focusDate.getMonth();
+  const leading = (new Date(year, month, 1).getDay() + 6) % 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  document.getElementById("calendarMonth").textContent = new Intl.DateTimeFormat(language === "zh" ? "zh-HK" : "en-GB", { year: "numeric", month: "long" }).format(focusDate);
+  document.getElementById("calendarMonth").parentElement.querySelector("small").textContent = language === "zh" ? `${state.events.length}個活動` : `${state.events.length} events`;
+  for (let i = 0; i < leading; i++) cells += `<div class="month-cell outside"></div>`;
+  for (let day = 1; day <= daysInMonth; day++) {
+    const event = state.events.find(item => {
+      const date = new Date(`${item.date}T12:00:00`);
+      return date.getFullYear() === year && date.getMonth() === month && date.getDate() === day;
+    });
     cells += `<div class="month-cell">${day}${event ? `<div class="calendar-event-dot" data-action="open-event" data-event-id="${escapeHtml(event.id)}">${escapeHtml(eventTitle(event))}</div>` : ""}</div>`;
   }
   grid.innerHTML = cells;
@@ -249,7 +277,7 @@ function renderMembers(filter = "") {
   const filtered = state.members.filter(member => member.name.toLowerCase().includes(normalized));
   container.innerHTML = filtered.map(member => `<article class="member-row">
     <span class="avatar ${member.color}">${escapeHtml(member.initials)}</span>
-    <div><h4>${escapeHtml(member.name)}</h4><p>${member.name === "Samuel" ? "samuel@demo.team" : `${member.name.toLowerCase().replaceAll(" ", ".")}@demo.team`}</p></div>
+    <div><h4>${escapeHtml(member.name)}</h4><p>${escapeHtml(member.email || (cloudMode ? (language === "zh" ? "球隊成員" : "Team member") : `${member.name.toLowerCase().replaceAll(" ", ".")}@demo.team`))}</p></div>
     <span class="role-pill">${escapeHtml(t(member.role))}</span>
     <span class="member-status">${member.status === "online" ? (language === "zh" ? "在線" : "Online") : (language === "zh" ? "成員" : "Member")}</span>
   </article>`).join("");
@@ -257,6 +285,10 @@ function renderMembers(filter = "") {
 
 function renderMessages() {
   const container = document.getElementById("teamMessageList");
+  if (!state.messages.length) {
+    container.innerHTML = `<div class="empty-chat">${language === "zh" ? "未有訊息。講第一句啦。" : "No messages yet. Start the conversation."}</div>`;
+    return;
+  }
   container.innerHTML = `<div class="date-divider">${language === "zh" ? "今日" : "Today"}</div>` + state.messages.map(message => `<article class="message ${message.mine ? "mine" : ""}">
     <span class="avatar ${message.color}">${escapeHtml(message.initials)}</span>
     <div class="message-content"><div class="message-line"><strong>${escapeHtml(message.author)}</strong><span>${escapeHtml(message.time)}</span></div><p>${escapeHtml(language === "en" ? (message.textEn || message.textZh) : (message.textZh || message.textEn))}</p>${message.reaction ? `<span class="reaction">${escapeHtml(message.reaction)}</span>` : ""}</div>
@@ -269,7 +301,7 @@ function renderEventDetail(eventId) {
   if (!event) return;
   state.currentEventId = eventId;
   const counts = statusCounts(event);
-  const myStatus = event.attendance?.Samuel || "pending";
+  const myStatus = event.attendance?.[currentUserName] || "pending";
   const threads = state.threads[eventId] || [];
   const attendees = Object.entries(event.attendance || {}).filter(([, value]) => value === "going").slice(0, 8);
   document.getElementById("eventDetailContent").innerHTML = `<div class="event-detail-grid">
@@ -300,6 +332,137 @@ function renderEventDetail(eventId) {
       <section class="panel attendance-panel" style="margin-top:18px"><h3>${escapeHtml(t("attendance"))}</h3><p>${counts.going} ${escapeHtml(t("going"))} · ${counts.pending} ${escapeHtml(t("noReply"))}</p><div class="attendance-list">${attendees.map(([name]) => { const member = state.members.find(item => item.name === name) || { initials: name.slice(0,2).toUpperCase(), color: "avatar-blue" }; return `<div class="attendance-person"><span class="avatar ${member.color}">${escapeHtml(member.initials)}</span><strong>${escapeHtml(name)}</strong><span>✓ ${escapeHtml(t("going"))}</span></div>`; }).join("")}</div></section>
     </aside>
   </div>`;
+}
+
+function nameInitials(name = "") {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  return (words.length > 1 ? words.slice(0, 2).map(word => word[0]).join("") : (name.trim().slice(0, 2) || "TU")).toUpperCase();
+}
+
+function renderCloudContext() {
+  if (!cloudMode || !currentTeam) return;
+  document.documentElement.classList.add("cloud-mode");
+  document.getElementById("desktopTeamName").textContent = currentTeam.name;
+  document.getElementById("mobileTeamName").textContent = currentTeam.name;
+  document.getElementById("teamPageName").textContent = currentTeam.name;
+  document.getElementById("modePill").textContent = "LIVE";
+  document.getElementById("profileName").textContent = currentUserName;
+  document.getElementById("homeUserName").textContent = currentUserName;
+  document.getElementById("profileInitials").textContent = nameInitials(currentUserName);
+  document.getElementById("profileRole").textContent = t(currentRole);
+  document.getElementById("memberCount").textContent = state.members.length;
+  document.getElementById("signOutButton").hidden = false;
+  const canManage = ["admin", "captain"].includes(currentRole);
+  document.querySelectorAll('[data-action="open-create-event"]').forEach(button => { button.hidden = !canManage; });
+  document.querySelectorAll('[data-action="copy-invite"]').forEach(button => { button.hidden = !canManage; });
+  const announcementPanel = document.querySelector(".announcements-panel");
+  if (announcementPanel) announcementPanel.hidden = true;
+}
+
+function setAccessStatus(elementId, message = "", error = false) {
+  const element = document.getElementById(elementId);
+  element.textContent = message;
+  element.classList.toggle("error", error);
+}
+
+function showLoginGate(message = "") {
+  document.documentElement.classList.add("cloud-mode", "cloud-loading");
+  document.getElementById("authGate").hidden = false;
+  document.getElementById("onboardingGate").hidden = true;
+  setAccessStatus("authStatus", message);
+}
+
+function showOnboardingGate() {
+  document.documentElement.classList.add("cloud-mode", "cloud-loading");
+  document.getElementById("authGate").hidden = true;
+  document.getElementById("onboardingGate").hidden = false;
+}
+
+function hideAccessGates() {
+  document.getElementById("authGate").hidden = true;
+  document.getElementById("onboardingGate").hidden = true;
+  document.documentElement.classList.remove("cloud-loading");
+}
+
+function clearInviteFromUrl() {
+  const url = new URL(location.href);
+  if (!url.searchParams.has("invite")) return;
+  url.searchParams.delete("invite");
+  history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+}
+
+async function loadCloudWorkspace({ preserveView = true } = {}) {
+  if (!cloudMode || cloudLoadPromise) return cloudLoadPromise;
+  cloudLoadPromise = (async () => {
+    const previousView = preserveView ? state.currentView : "home";
+    const preferredTeamId = localStorage.getItem(TEAM_KEY);
+    const workspace = await backend.loadWorkspace(preferredTeamId);
+    cloudUser = workspace.user;
+    if (!workspace.user) {
+      showLoginGate();
+      return;
+    }
+    if (!workspace.teams.length) {
+      showOnboardingGate();
+      return;
+    }
+
+    currentTeam = workspace.team;
+    currentRole = workspace.currentRole || "member";
+    currentUserName = workspace.currentName || workspace.user.email?.split("@")[0] || "TeamUp member";
+    localStorage.setItem(TEAM_KEY, currentTeam.id);
+    state = workspace.state;
+    state.currentView = previousView === "event" ? "home" : (previousView || "home");
+    state.previousView = "home";
+    hideAccessGates();
+    applyTranslations();
+    showView(state.currentView, { updatePrevious: false });
+
+    if (unsubscribeCloud) unsubscribeCloud();
+    unsubscribeCloud = backend.subscribe(currentTeam.id, () => {
+      cloudLoadPromise = null;
+      loadCloudWorkspace({ preserveView: true }).catch(error => showToast(error.message));
+    });
+  })().finally(() => { cloudLoadPromise = null; });
+  return cloudLoadPromise;
+}
+
+async function handleSignedIn(session) {
+  if (!session?.user) return showLoginGate();
+  const inviteToken = new URL(location.href).searchParams.get("invite");
+  if (inviteToken) {
+    try {
+      const teamId = await backend.acceptInvite(inviteToken);
+      localStorage.setItem(TEAM_KEY, teamId);
+      clearInviteFromUrl();
+      showToast(language === "zh" ? "已加入球隊" : "Joined the team");
+    } catch (error) {
+      setAccessStatus("authStatus", error.message || "邀請連結無效。", true);
+    }
+  }
+  await loadCloudWorkspace({ preserveView: false });
+}
+
+async function bootstrapCloud() {
+  if (!cloudMode) return;
+  showLoginGate(language === "zh" ? "正在檢查登入狀態…" : "Checking your session…");
+  try {
+    const result = await backend.initialize((event, session) => {
+      if (event === "SIGNED_OUT") {
+        currentTeam = null;
+        cloudUser = null;
+        if (unsubscribeCloud) unsubscribeCloud();
+        showLoginGate(language === "zh" ? "你已登出。" : "You are signed out.");
+      } else if (event === "SIGNED_IN" && session) {
+        handleSignedIn(session).catch(error => showLoginGate(error.message));
+      }
+    });
+    if (result.session) await handleSignedIn(result.session);
+    else showLoginGate();
+  } catch (error) {
+    showLoginGate(error.message || "暫時未能連接伺服器。");
+    setAccessStatus("authStatus", error.message || "暫時未能連接伺服器。", true);
+  }
 }
 
 function showView(viewName, { updatePrevious = true } = {}) {
@@ -376,7 +539,18 @@ document.addEventListener("click", async event => {
   const rsvp = event.target.closest("[data-rsvp]");
   if (rsvp) {
     const target = state.events.find(item => item.id === rsvp.dataset.eventId);
-    if (target) { target.attendance.Samuel = rsvp.dataset.rsvp; saveState(); renderAll(); showToast(t("responseSaved")); }
+    if (target) {
+      if (cloudMode) {
+        try {
+          await backend.setAttendance(target.id, rsvp.dataset.rsvp);
+          target.attendance[currentUserName] = rsvp.dataset.rsvp;
+        } catch (error) { showToast(error.message); return; }
+      } else {
+        target.attendance.Samuel = rsvp.dataset.rsvp;
+        saveState();
+      }
+      renderAll(); showToast(t("responseSaved"));
+    }
     return;
   }
 
@@ -388,7 +562,25 @@ document.addEventListener("click", async event => {
   if (action === "close-create-event") closeCreateEvent();
   if (action === "open-event") openEvent(actionButton.dataset.eventId);
   if (action === "back-from-event") showView(state.previousView || "home", { updatePrevious: false });
-  if (action === "copy-invite") copyText(`${location.origin}${location.pathname}?join=demo-team`, t("inviteCopied"));
+  if (action === "copy-invite") {
+    if (cloudMode) {
+      try {
+        const token = await backend.createInvite(currentTeam.id);
+        const inviteUrl = new URL(`${location.origin}${location.pathname}`);
+        inviteUrl.searchParams.set("cloud", "1");
+        inviteUrl.searchParams.set("invite", token);
+        const link = inviteUrl.toString();
+        document.getElementById("inviteLinkInput").value = link;
+        document.getElementById("inviteModalBackdrop").hidden = false;
+        document.body.style.overflow = "hidden";
+      } catch (error) { showToast(error.message); }
+    } else {
+      copyText(`${location.origin}${location.pathname}?join=demo-team`, t("inviteCopied"));
+    }
+  }
+  if (action === "copy-current-invite") copyText(document.getElementById("inviteLinkInput").value, t("inviteCopied"));
+  if (action === "close-invite") { document.getElementById("inviteModalBackdrop").hidden = true; document.body.style.overflow = ""; }
+  if (action === "sign-out" && cloudMode) { await backend.signOut(); }
   if (action === "close-notifications") notificationDrawer(false);
   if (action === "show-chat-info") showToast(language === "zh" ? "Team Chat只保留球隊同運動相關討論" : "Team Chat is for team and sport-related discussion");
   if (action === "reset-demo" && confirm(language === "zh" ? "確定重設所有Demo資料？" : "Reset all demo data?")) { localStorage.removeItem(STORAGE_KEY); state = initialState(); saveState(); renderAll(); showView("home"); showToast(t("demoReset")); }
@@ -408,16 +600,22 @@ document.getElementById("languageButton").addEventListener("click", () => {
   applyTranslations();
 });
 
-document.getElementById("teamMessageForm").addEventListener("submit", event => {
+document.getElementById("teamMessageForm").addEventListener("submit", async event => {
   event.preventDefault();
   const input = document.getElementById("teamMessageInput");
   const text = input.value.trim();
   if (!text) return;
-  state.messages.push({ id: Date.now(), author: "Samuel", initials: "SL", color: "avatar-blue", time: t("justNow"), textZh: text, textEn: text, mine: true });
-  input.value = ""; saveState(); renderMessages(); showToast(t("messageSent"));
+  if (cloudMode) {
+    try { await backend.sendMessage(currentTeam.id, text); await loadCloudWorkspace({ preserveView: true }); }
+    catch (error) { showToast(error.message); return; }
+  } else {
+    state.messages.push({ id: Date.now(), author: "Samuel", initials: "SL", color: "avatar-blue", time: t("justNow"), textZh: text, textEn: text, mine: true });
+    saveState(); renderMessages();
+  }
+  input.value = ""; showToast(t("messageSent"));
 });
 
-document.getElementById("createEventForm").addEventListener("submit", event => {
+document.getElementById("createEventForm").addEventListener("submit", async event => {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
   const title = String(form.get("title") || "").trim();
@@ -425,13 +623,23 @@ document.getElementById("createEventForm").addEventListener("submit", event => {
   const startTime = String(form.get("startTime") || "");
   const venue = String(form.get("venue") || "").trim();
   if (!title || !date || !startTime || !venue) { showToast(t("fieldRequired")); return; }
-  const id = `event-${Date.now()}`;
-  state.events.push({ id, type: form.get("type"), titleZh: title, titleEn: title, date, meetTime: form.get("meetTime") || startTime, startTime, endTime: "", venue, notesZh: form.get("notes") || "", notesEn: form.get("notes") || "", status: "confirmed", attendance: Object.fromEntries(state.members.map(member => [member.name, member.name === "Samuel" ? "going" : "pending"])) });
-  state.threads[id] = [];
-  saveState(); event.currentTarget.reset(); closeCreateEvent(); renderAll(); showToast(t("eventCreated")); openEvent(id);
+  let id;
+  if (cloudMode) {
+    try {
+      const created = await backend.createEvent(currentTeam.id, { type: form.get("type"), title, date, meetTime: form.get("meetTime") || startTime, startTime, venue, notes: form.get("notes") || "" });
+      id = created.id;
+      await loadCloudWorkspace({ preserveView: true });
+    } catch (error) { showToast(error.message); return; }
+  } else {
+    id = `event-${Date.now()}`;
+    state.events.push({ id, type: form.get("type"), titleZh: title, titleEn: title, date, meetTime: form.get("meetTime") || startTime, startTime, endTime: "", venue, notesZh: form.get("notes") || "", notesEn: form.get("notes") || "", status: "confirmed", attendance: Object.fromEntries(state.members.map(member => [member.name, member.name === "Samuel" ? "going" : "pending"])) });
+    state.threads[id] = [];
+    saveState();
+  }
+  event.currentTarget.reset(); closeCreateEvent(); renderAll(); showToast(t("eventCreated")); openEvent(id);
 });
 
-document.addEventListener("submit", event => {
+document.addEventListener("submit", async event => {
   const form = event.target.closest("[data-event-thread-form]");
   if (!form) return;
   event.preventDefault();
@@ -439,9 +647,15 @@ document.addEventListener("submit", event => {
   const text = input.value.trim();
   if (!text) return;
   const eventId = form.dataset.eventThreadForm;
-  state.threads[eventId] ||= [];
-  state.threads[eventId].push({ author: "Samuel", initials: "SL", color: "avatar-blue", time: t("justNow"), textZh: text, textEn: text });
-  input.value = ""; saveState(); renderEventDetail(eventId); showToast(t("messageSent"));
+  if (cloudMode) {
+    try { await backend.sendMessage(currentTeam.id, text, eventId); await loadCloudWorkspace({ preserveView: true }); }
+    catch (error) { showToast(error.message); return; }
+  } else {
+    state.threads[eventId] ||= [];
+    state.threads[eventId].push({ author: "Samuel", initials: "SL", color: "avatar-blue", time: t("justNow"), textZh: text, textEn: text });
+    saveState(); renderEventDetail(eventId);
+  }
+  input.value = ""; showToast(t("messageSent"));
 });
 
 document.getElementById("memberSearch").addEventListener("input", event => renderMembers(event.target.value));
@@ -453,9 +667,64 @@ document.querySelectorAll("[data-calendar-mode]").forEach(button => button.addEv
 }));
 
 document.getElementById("eventModalBackdrop").addEventListener("click", event => { if (event.target === event.currentTarget) closeCreateEvent(); });
-document.addEventListener("keydown", event => { if (event.key === "Escape") { closeCreateEvent(); notificationDrawer(false); } });
+document.getElementById("inviteModalBackdrop").addEventListener("click", event => {
+  if (event.target === event.currentTarget) {
+    event.currentTarget.hidden = true;
+    document.body.style.overflow = "";
+  }
+});
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape") {
+    closeCreateEvent();
+    notificationDrawer(false);
+    document.getElementById("inviteModalBackdrop").hidden = true;
+    document.body.style.overflow = "";
+  }
+});
+
+document.getElementById("authForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  const email = String(new FormData(event.currentTarget).get("email") || "").trim();
+  if (!email) return;
+  const button = event.currentTarget.querySelector('button[type="submit"]');
+  button.disabled = true;
+  setAccessStatus("authStatus", language === "zh" ? "正在寄出登入連結…" : "Sending your sign-in link…");
+  try {
+    await backend.sendMagicLink(email, `${location.origin}${location.pathname}${location.search}`);
+    setAccessStatus("authStatus", language === "zh" ? "已寄出。請開電郵，再按入面嘅登入連結。" : "Sent. Open your email and click the sign-in link.");
+  } catch (error) {
+    setAccessStatus("authStatus", error.message || "未能寄出登入連結。", true);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+document.getElementById("createTeamOnboardingForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const name = String(form.get("teamName") || "").trim();
+  const sport = String(form.get("sport") || "volleyball");
+  if (!name) return;
+  const button = event.currentTarget.querySelector('button[type="submit"]');
+  button.disabled = true;
+  setAccessStatus("onboardingStatus", language === "zh" ? "正在建立球隊…" : "Creating the team…");
+  try {
+    const teamId = await backend.createTeam(name, sport);
+    localStorage.setItem(TEAM_KEY, teamId);
+    await loadCloudWorkspace({ preserveView: false });
+    showToast(language === "zh" ? "球隊已建立" : "Team created");
+  } catch (error) {
+    setAccessStatus("onboardingStatus", error.message || "未能建立球隊。", true);
+  } finally {
+    button.disabled = false;
+  }
+});
 
 if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
 
 applyTranslations();
-showView(state.currentView === "event" ? "home" : (state.currentView || "home"), { updatePrevious: false });
+if (cloudMode) {
+  bootstrapCloud();
+} else {
+  showView(state.currentView === "event" ? "home" : (state.currentView || "home"), { updatePrevious: false });
+}
