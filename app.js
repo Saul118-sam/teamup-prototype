@@ -370,8 +370,8 @@ function setAccessStatus(elementId, message = "", error = false) {
 function authErrorMessage(error) {
   if (error?.status === 429 || error?.code === "over_email_send_rate_limit" || /rate limit/i.test(error?.message || "")) {
     return language === "zh"
-      ? "測試電郵每小時最多兩封，請等約一小時後再申請，期間唔好重複撳。"
-      : "The test email service allows only 2 sign-in emails per hour. Wait about an hour before trying again.";
+      ? "暫時未能寄出登入連結，請稍後再試。"
+      : "The sign-in link could not be sent. Please try again later.";
   }
   return error?.message || (language === "zh" ? "未能寄出登入連結。" : "Could not send the sign-in link.");
 }
@@ -617,8 +617,8 @@ document.addEventListener("click", async event => {
   if (action === "close-invite") { document.getElementById("inviteModalBackdrop").hidden = true; document.body.style.overflow = ""; }
   if (action === "sign-out" && cloudMode) {
     const warning = language === "zh"
-      ? "測試版每小時最多只可寄出 2 封登入電郵。登出後可能要等一段時間先可以再次登入。確定登出？"
-      : "The test service can send only 2 sign-in emails per hour. You may need to wait before signing in again. Sign out?";
+      ? "確定登出 TeamUp？"
+      : "Sign out of TeamUp?";
     if (confirm(warning)) await backend.signOut();
   }
   if (action === "close-notifications") notificationDrawer(false);
