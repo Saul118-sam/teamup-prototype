@@ -1,4 +1,4 @@
-const CACHE = "teamup-prototype-v4";
+const CACHE = "teamup-prototype-v5";
 const ASSETS = ["./", "./index.html", "./styles.css", "./app.js", "./backend.js", "./supabase-config.js", "./manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", event => {
