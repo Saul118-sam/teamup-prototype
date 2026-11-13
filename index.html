@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="zh-HK">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#07111f" />
+    <meta name="description" content="A private prototype for a Hong Kong sports team hub." />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./styles.css" />
+    <title>TeamUp — Sports Team Hub</title>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Primary navigation">
+        <button class="brand" data-action="go-home" aria-label="TeamUp home">
+          <span class="brand-mark">T</span>
+          <span class="brand-copy"><strong>TeamUp</strong><small>Sports team hub</small></span>
+        </button>
+
+        <nav class="side-nav">
+          <button class="nav-item active" data-view="home">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.8 12 3l9 7.8v9.7a.5.5 0 0 1-.5.5h-5.8v-7H9.3v7H3.5a.5.5 0 0 1-.5-.5z"/></svg>
+            <span data-i18n="home">首頁</span>
+          </button>
+          <button class="nav-item" data-view="chat">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v12H9l-5 4z"/></svg>
+            <span data-i18n="chat">Team Chat</span><span class="nav-badge" id="chatBadge">3</span>
+          </button>
+          <button class="nav-item" data-view="calendar">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3v3m14-3v3M3 9h18M4 5h16a1 1 0 0 1 1 1v15H3V6a1 1 0 0 1 1-1z"/></svg>
+            <span data-i18n="calendar">月曆</span>
+          </button>
+          <button class="nav-item" data-view="team">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7-2a3 3 0 1 0 0-6M2 21v-3.2C2 14.6 5.1 13 9 13s7 1.6 7 4.8V21Zm14-7c3.5.1 6 1.7 6 4.5V21h-4"/></svg>
+            <span data-i18n="team">球隊</span>
+          </button>
+        </nav>
+
+        <div class="side-card">
+          <span class="eyebrow">PRIVATE PROTOTYPE</span>
+          <p data-i18n="demoNote">現時使用虛構Demo資料，稍後先加入真實球隊。</p>
+        </div>
+
+        <button class="profile-row" data-view="team">
+          <span class="avatar avatar-blue">SL</span>
+          <span><strong>Samuel</strong><small data-i18n="adminRole">管理員</small></span>
+          <span class="chevron">›</span>
+        </button>
+      </aside>
+
+      <div class="workspace">
+        <header class="topbar">
+          <div class="mobile-brand">
+            <span class="brand-mark small">T</span>
+            <span><strong>TeamUp</strong><small>Demo Volleyball Club</small></span>
+          </div>
+          <div class="desktop-context">
+            <span class="team-dot"></span>
+            <span>Demo Volleyball Club</span>
+            <span class="demo-pill">DEMO</span>
+          </div>
+          <div class="top-actions">
+            <button class="language-button" id="languageButton" aria-label="Change language">EN</button>
+            <button class="icon-button notification-button" id="notificationButton" aria-label="Notifications">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Zm-8 12h4"/></svg>
+              <span class="notification-dot"></span>
+            </button>
+          </div>
+        </header>
+
+        <main id="mainContent" tabindex="-1">
+          <section class="view active" id="view-home" data-title="首頁">
+            <div class="page-heading home-heading">
+              <div>
+                <p class="eyebrow" data-i18n="thursdayEyebrow">星期四 · 晚上</p>
+                <h1><span data-i18n="goodEvening">晚上好</span>，Samuel</h1>
+                <p class="subhead" data-i18n="homeSubhead">下一場訓練仲有兩日，記得睇埋最新安排。</p>
+              </div>
+              <button class="primary-button desktop-only" data-action="open-create-event">
+                <span>＋</span><span data-i18n="createEvent">建立活動</span>
+              </button>
+            </div>
+
+            <div class="home-grid">
+              <article class="next-event-card" id="featuredEventCard">
+                <div class="card-topline">
+                  <span class="event-type"><span class="pulse-dot"></span><span data-i18n="nextEvent">下一場活動</span></span>
+                  <span class="status-chip confirmed" data-i18n="confirmed">已確認</span>
+                </div>
+                <div class="event-date-block">
+                  <span class="event-day">15</span>
+                  <span><strong>NOV</strong><small>FRI</small></span>
+                </div>
+                <div class="event-main">
+                  <p class="eyebrow" data-i18n="training">訓練</p>
+                  <h2 data-featured-title>星期五晚訓練</h2>
+                  <div class="event-meta">
+                    <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span data-featured-time>7:45 PM集合 · 8:00 PM開始</span></span>
+                    <span><svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg><span data-featured-venue>Harbour Sports Centre · Court 2</span></span>
+                  </div>
+                </div>
+                <div class="attendance-strip">
+                  <div><strong id="homeGoingCount">9</strong><span data-i18n="going">去</span></div>
+                  <div><strong id="homeMaybeCount">2</strong><span data-i18n="maybe">未定</span></div>
+                  <div><strong id="homeAwayCount">3</strong><span data-i18n="notGoing">唔去</span></div>
+                  <div><strong id="homePendingCount">4</strong><span data-i18n="noReply">未覆</span></div>
+                </div>
+                <div class="event-card-actions">
+                  <div class="avatar-stack" aria-label="Attendees">
+                    <span class="avatar avatar-coral">JC</span><span class="avatar avatar-violet">AL</span><span class="avatar avatar-green">IK</span><span class="avatar avatar-amber">MT</span><span class="avatar more">+5</span>
+                  </div>
+                  <button class="secondary-button" data-action="open-event" data-event-id="training-1"><span data-i18n="viewDetails">查看詳情</span><span>→</span></button>
+                </div>
+              </article>
+
+              <aside class="quick-panel">
+                <div class="section-title-row">
+                  <h3 data-i18n="quickActions">快速操作</h3>
+                </div>
+                <div class="quick-actions-grid">
+                  <button class="quick-action" data-action="open-create-event"><span class="quick-icon blue">＋</span><span data-i18n="newEvent">新增活動</span></button>
+                  <button class="quick-action" data-view="chat"><span class="quick-icon violet">#</span><span data-i18n="teamChat">球隊討論</span></button>
+                  <button class="quick-action" data-action="copy-invite"><span class="quick-icon green">↗</span><span data-i18n="inviteMember">邀請隊員</span></button>
+                  <button class="quick-action" data-view="calendar"><span class="quick-icon amber">▦</span><span data-i18n="openCalendar">查看月曆</span></button>
+                </div>
+              </aside>
+            </div>
+
+            <div class="content-grid">
+              <section class="panel announcements-panel">
+                <div class="section-title-row">
+                  <div><p class="eyebrow" data-i18n="officialUpdates">OFFICIAL UPDATES</p><h3 data-i18n="announcements">球隊公告</h3></div>
+                  <button class="text-button" data-view="chat" data-i18n="viewAll">查看全部</button>
+                </div>
+                <article class="announcement">
+                  <span class="announcement-icon">!</span>
+                  <div><div class="message-line"><strong>Coach Alex</strong><span>1 hr</span></div><p data-i18n="announcementText">星期五訓練改用二號場，請大家提早15分鐘到場熱身。</p><div class="announcement-footer"><span>📌 <span data-i18n="pinned">已置頂</span></span><button data-action="open-event" data-event-id="training-1" data-i18n="openEvent">打開活動</button></div></div>
+                </article>
+              </section>
+
+              <section class="panel upcoming-panel">
+                <div class="section-title-row">
+                  <div><p class="eyebrow" data-i18n="comingUp">COMING UP</p><h3 data-i18n="upcomingEvents">未來活動</h3></div>
+                  <button class="text-button" data-view="calendar" data-i18n="calendar">月曆</button>
+                </div>
+                <div id="upcomingEventsList" class="upcoming-list"></div>
+              </section>
+            </div>
+          </section>
+
+          <section class="view" id="view-chat" data-title="Team Chat">
+            <div class="chat-layout">
+              <div class="chat-main panel">
+                <div class="chat-header">
+                  <div><p class="eyebrow" data-i18n="teamSpace">TEAM SPACE</p><h1># <span data-i18n="teamChat">球隊討論</span></h1><p><span class="online-dot"></span> 12 <span data-i18n="onlineNow">人在線</span></p></div>
+                  <button class="icon-button" data-action="show-chat-info" aria-label="Chat information">•••</button>
+                </div>
+                <div class="pinned-banner" data-action="open-event" data-event-id="training-1"><span>📌</span><div><strong data-i18n="pinnedUpdate">置頂公告</strong><p data-i18n="announcementText">星期五訓練改用二號場，請大家提早15分鐘到場熱身。</p></div><span>›</span></div>
+                <div class="message-list" id="teamMessageList" aria-live="polite"></div>
+                <form class="message-composer" id="teamMessageForm">
+                  <button type="button" class="composer-button" aria-label="Add attachment">＋</button>
+                  <input id="teamMessageInput" autocomplete="off" data-i18n-placeholder="messagePlaceholder" placeholder="講啲同球隊有關嘅事…" />
+                  <button type="submit" class="send-button" aria-label="Send message">↑</button>
+                </form>
+              </div>
+              <aside class="chat-context panel">
+                <p class="eyebrow" data-i18n="chatGuideline">THIS SPACE IS FOR</p>
+                <h3 data-i18n="sportOnly">球隊正事，同運動有關嘅討論。</h3>
+                <ul>
+                  <li><span>✓</span><span data-i18n="guideEvents">訓練、比賽及場地安排</span></li>
+                  <li><span>✓</span><span data-i18n="guideTactics">球衣、裝備及戰術討論</span></li>
+                  <li><span>✓</span><span data-i18n="guideUpdates">球隊公告及重要更新</span></li>
+                </ul>
+                <div class="context-note"><strong data-i18n="whatsappTitle">WhatsApp留畀吹水。</strong><p data-i18n="whatsappCopy">正式球隊資訊集中喺度，就唔怕畀其他訊息沖走。</p></div>
+              </aside>
+            </div>
+          </section>
+
+          <section class="view" id="view-calendar" data-title="月曆">
+            <div class="page-heading">
+              <div><p class="eyebrow" data-i18n="seasonSchedule">SEASON SCHEDULE</p><h1 data-i18n="calendar">月曆</h1><p class="subhead" data-i18n="calendarSubhead">訓練、比賽同球隊活動，一個地方睇晒。</p></div>
+              <button class="primary-button" data-action="open-create-event"><span>＋</span><span data-i18n="createEvent">建立活動</span></button>
+            </div>
+            <div class="calendar-toolbar panel">
+              <button class="icon-button" data-action="previous-month" aria-label="Previous month">‹</button>
+              <div><strong id="calendarMonth">2026年11月</strong><small data-i18n="threeEvents">3個活動</small></div>
+              <button class="icon-button" data-action="next-month" aria-label="Next month">›</button>
+              <div class="view-toggle"><button class="active" data-calendar-mode="agenda" data-i18n="agenda">列表</button><button data-calendar-mode="month" data-i18n="month">月份</button></div>
+            </div>
+            <div id="calendarAgenda" class="calendar-agenda"></div>
+            <div id="calendarMonthGrid" class="month-grid panel" hidden></div>
+          </section>
+
+          <section class="view" id="view-team" data-title="球隊">
+            <div class="page-heading">
+              <div><p class="eyebrow" data-i18n="yourTeam">YOUR TEAM</p><h1>Demo Volleyball Club</h1><p class="subhead"><span data-i18n="demoRoster">虛構球隊資料 · 之後可隨時換成臻子Aspiring</span></p></div>
+              <button class="primary-button" data-action="copy-invite"><span>↗</span><span data-i18n="inviteMember">邀請隊員</span></button>
+            </div>
+            <div class="team-summary-grid">
+              <article class="stat-card"><span class="stat-icon blue">◎</span><div><strong>18</strong><span data-i18n="members">名成員</span></div></article>
+              <article class="stat-card"><span class="stat-icon green">↗</span><div><strong>72%</strong><span data-i18n="responseRate">今月回覆率</span></div></article>
+              <article class="stat-card"><span class="stat-icon violet">#</span><div><strong>24</strong><span data-i18n="messagesThisWeek">本週訊息</span></div></article>
+            </div>
+            <section class="panel member-panel">
+              <div class="section-title-row member-toolbar">
+                <div><p class="eyebrow" data-i18n="roster">ROSTER</p><h3 data-i18n="teamMembers">球隊成員</h3></div>
+                <input id="memberSearch" type="search" data-i18n-placeholder="searchMembers" placeholder="搜尋成員" />
+              </div>
+              <div id="memberList" class="member-list"></div>
+            </section>
+            <section class="panel prototype-settings">
+              <div><p class="eyebrow">PROTOTYPE SETTINGS</p><h3 data-i18n="demoControls">Demo控制</h3><p data-i18n="resetCopy">重設所有本機示範資料，包括新增活動及訊息。</p></div>
+              <button class="danger-button" data-action="reset-demo" data-i18n="resetDemo">重設Demo</button>
+            </section>
+          </section>
+
+          <section class="view event-view" id="view-event" data-title="活動詳情">
+            <button class="back-button" data-action="back-from-event">← <span data-i18n="back">返回</span></button>
+            <div id="eventDetailContent"></div>
+          </section>
+        </main>
+
+        <nav class="bottom-nav" aria-label="Mobile navigation">
+          <button class="nav-item active" data-view="home"><svg viewBox="0 0 24 24"><path d="M3 10.8 12 3l9 7.8v9.7a.5.5 0 0 1-.5.5h-5.8v-7H9.3v7H3.5a.5.5 0 0 1-.5-.5z"/></svg><span data-i18n="home">首頁</span></button>
+          <button class="nav-item" data-view="chat"><svg viewBox="0 0 24 24"><path d="M4 4h16v12H9l-5 4z"/></svg><span data-i18n="chatShort">Chat</span><span class="nav-badge">3</span></button>
+          <button class="nav-item create-nav" data-action="open-create-event"><span>＋</span><small data-i18n="create">新增</small></button>
+          <button class="nav-item" data-view="calendar"><svg viewBox="0 0 24 24"><path d="M5 3v3m14-3v3M3 9h18M4 5h16a1 1 0 0 1 1 1v15H3V6a1 1 0 0 1 1-1z"/></svg><span data-i18n="calendar">月曆</span></button>
+          <button class="nav-item" data-view="team"><svg viewBox="0 0 24 24"><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7-2a3 3 0 1 0 0-6M2 21v-3.2C2 14.6 5.1 13 9 13s7 1.6 7 4.8V21Zm14-7c3.5.1 6 1.7 6 4.5V21h-4"/></svg><span data-i18n="team">球隊</span></button>
+        </nav>
+      </div>
+    </div>
+
+    <div class="drawer-overlay" id="drawerOverlay"></div>
+    <aside class="notification-drawer" id="notificationDrawer" aria-label="Notifications">
+      <div class="drawer-header"><div><p class="eyebrow" data-i18n="stayUpdated">STAY UPDATED</p><h2 data-i18n="notifications">通知</h2></div><button class="icon-button" data-action="close-notifications">×</button></div>
+      <div class="notification-list">
+        <article class="notification unread"><span class="notification-icon blue">↻</span><div><strong data-i18n="venueChanged">場地已更改</strong><p data-i18n="announcementText">星期五訓練改用二號場，請大家提早15分鐘到場熱身。</p><small>1 hr</small></div></article>
+        <article class="notification unread"><span class="notification-icon violet">@</span><div><strong data-i18n="mentionedYou">Iris提及咗你</strong><p data-i18n="mentionText">@Samuel 今場係咪着深色衫？</p><small>2 hrs</small></div></article>
+        <article class="notification"><span class="notification-icon green">✓</span><div><strong data-i18n="newResponse">有新出席回覆</strong><p data-i18n="responseText">Marco會出席星期五晚訓練。</p><small>4 hrs</small></div></article>
+      </div>
+      <div class="notification-settings"><strong data-i18n="notificationSettings">通知設定</strong><label><span data-i18n="importantOnly">只接收公告、活動更新及Mentions</span><input type="checkbox" checked /></label></div>
+    </aside>
+
+    <div class="modal-backdrop" id="eventModalBackdrop" hidden>
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="createEventTitle">
+        <div class="modal-header"><div><p class="eyebrow" data-i18n="newTeamEvent">NEW TEAM EVENT</p><h2 id="createEventTitle" data-i18n="createEvent">建立活動</h2></div><button class="icon-button" data-action="close-create-event">×</button></div>
+        <form id="createEventForm">
+          <label><span data-i18n="eventTitle">活動名稱</span><input name="title" required placeholder="例如：星期五晚訓練" /></label>
+          <div class="field-grid"><label><span data-i18n="eventType">類型</span><select name="type"><option value="training" data-i18n="training">訓練</option><option value="match" data-i18n="match">比賽</option><option value="social" data-i18n="social">聚會</option></select></label><label><span data-i18n="date">日期</span><input name="date" type="date" required value="2026-11-20" /></label></div>
+          <div class="field-grid"><label><span data-i18n="meetTime">集合時間</span><input name="meetTime" type="time" value="19:45" /></label><label><span data-i18n="startTime">開始時間</span><input name="startTime" type="time" required value="20:00" /></label></div>
+          <label><span data-i18n="venue">場地</span><input name="venue" required placeholder="例如：Harbour Sports Centre · Court 2" /></label>
+          <label><span data-i18n="notes">裝備及備註</span><textarea name="notes" rows="3" placeholder="例如：深色衫、自備水樽"></textarea></label>
+          <div class="form-actions"><button type="button" class="secondary-button" data-action="close-create-event" data-i18n="cancel">取消</button><button type="submit" class="primary-button"><span data-i18n="createEvent">建立活動</span><span>→</span></button></div>
+        </form>
+      </section>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./app.js"></script>
+  </body>
+</html>
