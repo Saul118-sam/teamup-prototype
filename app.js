@@ -1,6 +1,7 @@
 const STORAGE_KEY = "teamup-prototype-state-v1";
 const LANGUAGE_KEY = "teamup-prototype-language";
 const TEAM_KEY = "teamup-active-team";
+const AUTH_EMAIL_COOLDOWN_KEY = "teamup-auth-email-cooldown";
 const backend = window.TeamUpBackend;
 const CLOUD_PREVIEW = new URLSearchParams(location.search).get("cloud") === "1";
 const cloudMode = Boolean(backend?.configured && CLOUD_PREVIEW);
@@ -124,6 +125,7 @@ let currentRole = "admin";
 let currentUserName = "Samuel";
 let unsubscribeCloud = null;
 let cloudLoadPromise = null;
+let authCooldownTimer = null;
 
 function loadState() {
   try {
@@ -365,6 +367,39 @@ function setAccessStatus(elementId, message = "", error = false) {
   element.classList.toggle("error", error);
 }
 
+function authErrorMessage(error) {
+  if (error?.status === 429 || error?.code === "over_email_send_rate_limit" || /rate limit/i.test(error?.message || "")) {
+    return language === "zh"
+      ? "測試電郵每小時最多兩封，請等約一小時後再申請，期間唔好重複撳。"
+      : "The test email service allows only 2 sign-in emails per hour. Wait about an hour before trying again.";
+  }
+  return error?.message || (language === "zh" ? "未能寄出登入連結。" : "Could not send the sign-in link.");
+}
+
+function startAuthCooldown(button, seconds = 60) {
+  const original = button.dataset.originalLabel || button.innerHTML;
+  button.dataset.originalLabel = original;
+  const until = Date.now() + (seconds * 1000);
+  localStorage.setItem(AUTH_EMAIL_COOLDOWN_KEY, String(until));
+  window.clearInterval(authCooldownTimer);
+
+  const update = () => {
+    const remaining = Math.max(0, Math.ceil((until - Date.now()) / 1000));
+    if (!remaining) {
+      window.clearInterval(authCooldownTimer);
+      localStorage.removeItem(AUTH_EMAIL_COOLDOWN_KEY);
+      button.disabled = false;
+      button.innerHTML = original;
+      return;
+    }
+    button.disabled = true;
+    button.textContent = language === "zh" ? `${remaining} 秒後可再申請` : `Try again in ${remaining}s`;
+  };
+
+  update();
+  authCooldownTimer = window.setInterval(update, 1000);
+}
+
 function showLoginGate(message = "") {
   document.documentElement.classList.add("cloud-mode", "cloud-loading");
   document.getElementById("authGate").hidden = false;
@@ -580,7 +615,12 @@ document.addEventListener("click", async event => {
   }
   if (action === "copy-current-invite") copyText(document.getElementById("inviteLinkInput").value, t("inviteCopied"));
   if (action === "close-invite") { document.getElementById("inviteModalBackdrop").hidden = true; document.body.style.overflow = ""; }
-  if (action === "sign-out" && cloudMode) { await backend.signOut(); }
+  if (action === "sign-out" && cloudMode) {
+    const warning = language === "zh"
+      ? "測試版每小時最多只可寄出 2 封登入電郵。登出後可能要等一段時間先可以再次登入。確定登出？"
+      : "The test service can send only 2 sign-in emails per hour. You may need to wait before signing in again. Sign out?";
+    if (confirm(warning)) await backend.signOut();
+  }
   if (action === "close-notifications") notificationDrawer(false);
   if (action === "show-chat-info") showToast(language === "zh" ? "Team Chat只保留球隊同運動相關討論" : "Team Chat is for team and sport-related discussion");
   if (action === "reset-demo" && confirm(language === "zh" ? "確定重設所有Demo資料？" : "Reset all demo data?")) { localStorage.removeItem(STORAGE_KEY); state = initialState(); saveState(); renderAll(); showView("home"); showToast(t("demoReset")); }
@@ -753,10 +793,12 @@ document.getElementById("authForm").addEventListener("submit", async event => {
   try {
     await backend.sendMagicLink(email, `${location.origin}${location.pathname}${location.search}`);
     setAccessStatus("authStatus", language === "zh" ? "已寄出。請開電郵，再按入面嘅登入連結。" : "Sent. Open your email and click the sign-in link.");
+    startAuthCooldown(button, 60);
   } catch (error) {
-    setAccessStatus("authStatus", error.message || "未能寄出登入連結。", true);
+    setAccessStatus("authStatus", authErrorMessage(error), true);
+    if (error?.status === 429 || error?.code === "over_email_send_rate_limit") startAuthCooldown(button, 60);
   } finally {
-    button.disabled = false;
+    if (!localStorage.getItem(AUTH_EMAIL_COOLDOWN_KEY)) button.disabled = false;
   }
 });
 
@@ -785,6 +827,9 @@ if ("serviceWorker" in navigator) window.addEventListener("load", () => navigato
 
 applyTranslations();
 if (cloudMode) {
+  const authButton = document.querySelector('#authForm button[type="submit"]');
+  const cooldownUntil = Number(localStorage.getItem(AUTH_EMAIL_COOLDOWN_KEY) || 0);
+  if (cooldownUntil > Date.now()) startAuthCooldown(authButton, Math.ceil((cooldownUntil - Date.now()) / 1000));
   bootstrapCloud();
 } else {
   showView(state.currentView === "event" ? "home" : (state.currentView || "home"), { updatePrevious: false });
