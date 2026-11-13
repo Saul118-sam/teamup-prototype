@@ -2,7 +2,8 @@ const STORAGE_KEY = "teamup-prototype-state-v1";
 const LANGUAGE_KEY = "teamup-prototype-language";
 const TEAM_KEY = "teamup-active-team";
 const backend = window.TeamUpBackend;
-const cloudMode = Boolean(backend?.configured);
+const CLOUD_PREVIEW = new URLSearchParams(location.search).get("cloud") === "1";
+const cloudMode = Boolean(backend?.configured && CLOUD_PREVIEW);
 
 const translations = {
   zh: {
@@ -565,7 +566,10 @@ document.addEventListener("click", async event => {
     if (cloudMode) {
       try {
         const token = await backend.createInvite(currentTeam.id);
-        const link = `${location.origin}${location.pathname}?invite=${encodeURIComponent(token)}`;
+        const inviteUrl = new URL(`${location.origin}${location.pathname}`);
+        inviteUrl.searchParams.set("cloud", "1");
+        inviteUrl.searchParams.set("invite", token);
+        const link = inviteUrl.toString();
         document.getElementById("inviteLinkInput").value = link;
         document.getElementById("inviteModalBackdrop").hidden = false;
         document.body.style.overflow = "hidden";
