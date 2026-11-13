@@ -11,7 +11,46 @@
     <title>TeamUp — Sports Team Hub</title>
   </head>
   <body>
-    <div class="app-shell">
+    <div class="access-gate" id="authGate" hidden>
+      <section class="access-card" aria-labelledby="authTitle">
+        <div class="access-brand"><span class="brand-mark">T</span><div><strong>TeamUp</strong><small>香港業餘球隊嘅共同空間</small></div></div>
+        <p class="eyebrow">PASSWORDLESS LOGIN</p>
+        <h1 id="authTitle">登入你嘅球隊</h1>
+        <p>輸入電郵，我哋會寄一條一次性登入連結畀你。毋須密碼。</p>
+        <form id="authForm" class="access-form">
+          <label for="authEmail">電郵地址</label>
+          <input id="authEmail" name="email" type="email" autocomplete="email" placeholder="name@example.com" required />
+          <button class="primary-button" type="submit">寄出登入連結 <span>→</span></button>
+        </form>
+        <div class="access-status" id="authStatus" role="status" aria-live="polite"></div>
+        <small class="privacy-note">只有已加入球隊嘅會員先可以睇球隊資料。</small>
+      </section>
+    </div>
+
+    <div class="access-gate" id="onboardingGate" hidden>
+      <section class="access-card" aria-labelledby="onboardingTitle">
+        <div class="access-brand"><span class="brand-mark">T</span><div><strong>TeamUp</strong><small>建立第一支測試球隊</small></div></div>
+        <p class="eyebrow">FIRST TEAM</p>
+        <h1 id="onboardingTitle">你仲未加入任何球隊</h1>
+        <p>可以先用臨時資料開隊，之後再改名同補充球隊資料。</p>
+        <form id="createTeamOnboardingForm" class="access-form">
+          <label for="onboardingTeamName">球隊名稱</label>
+          <input id="onboardingTeamName" name="teamName" value="臻子 Aspiring" maxlength="80" required />
+          <label for="onboardingSport">運動</label>
+          <select id="onboardingSport" name="sport">
+            <option value="volleyball">排球</option>
+            <option value="football">足球</option>
+            <option value="basketball">籃球</option>
+            <option value="badminton">羽毛球</option>
+          </select>
+          <button class="primary-button" type="submit">建立測試球隊 <span>→</span></button>
+        </form>
+        <button class="text-button access-signout" type="button" data-action="sign-out">用另一個帳戶登入</button>
+        <div class="access-status" id="onboardingStatus" role="status" aria-live="polite"></div>
+      </section>
+    </div>
+
+    <div class="app-shell" id="appShell">
       <aside class="sidebar" aria-label="Primary navigation">
         <button class="brand" data-action="go-home" aria-label="TeamUp home">
           <span class="brand-mark">T</span>
@@ -43,8 +82,8 @@
         </div>
 
         <button class="profile-row" data-view="team">
-          <span class="avatar avatar-blue">SL</span>
-          <span><strong>Samuel</strong><small data-i18n="adminRole">管理員</small></span>
+          <span class="avatar avatar-blue" id="profileInitials">SL</span>
+          <span><strong id="profileName">Samuel</strong><small id="profileRole" data-i18n="adminRole">管理員</small></span>
           <span class="chevron">›</span>
         </button>
       </aside>
@@ -53,15 +92,16 @@
         <header class="topbar">
           <div class="mobile-brand">
             <span class="brand-mark small">T</span>
-            <span><strong>TeamUp</strong><small>Demo Volleyball Club</small></span>
+            <span><strong>TeamUp</strong><small id="mobileTeamName">Demo Volleyball Club</small></span>
           </div>
           <div class="desktop-context">
             <span class="team-dot"></span>
-            <span>Demo Volleyball Club</span>
-            <span class="demo-pill">DEMO</span>
+            <span id="desktopTeamName">Demo Volleyball Club</span>
+            <span class="demo-pill" id="modePill">DEMO</span>
           </div>
           <div class="top-actions">
             <button class="language-button" id="languageButton" aria-label="Change language">EN</button>
+            <button class="account-button" id="signOutButton" data-action="sign-out" type="button" hidden>登出</button>
             <button class="icon-button notification-button" id="notificationButton" aria-label="Notifications">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Zm-8 12h4"/></svg>
               <span class="notification-dot"></span>
@@ -74,7 +114,7 @@
             <div class="page-heading home-heading">
               <div>
                 <p class="eyebrow" data-i18n="thursdayEyebrow">星期四 · 晚上</p>
-                <h1><span data-i18n="goodEvening">晚上好</span>，Samuel</h1>
+                <h1><span data-i18n="goodEvening">晚上好</span>，<span id="homeUserName">Samuel</span></h1>
                 <p class="subhead" data-i18n="homeSubhead">下一場訓練仲有兩日，記得睇埋最新安排。</p>
               </div>
               <button class="primary-button desktop-only" data-action="open-create-event">
@@ -194,11 +234,11 @@
 
           <section class="view" id="view-team" data-title="球隊">
             <div class="page-heading">
-              <div><p class="eyebrow" data-i18n="yourTeam">YOUR TEAM</p><h1>Demo Volleyball Club</h1><p class="subhead"><span data-i18n="demoRoster">虛構球隊資料 · 之後可隨時換成臻子Aspiring</span></p></div>
+              <div><p class="eyebrow" data-i18n="yourTeam">YOUR TEAM</p><h1 id="teamPageName">Demo Volleyball Club</h1><p class="subhead"><span data-i18n="demoRoster">虛構球隊資料 · 之後可隨時換成臻子Aspiring</span></p></div>
               <button class="primary-button" data-action="copy-invite"><span>↗</span><span data-i18n="inviteMember">邀請隊員</span></button>
             </div>
             <div class="team-summary-grid">
-              <article class="stat-card"><span class="stat-icon blue">◎</span><div><strong>18</strong><span data-i18n="members">名成員</span></div></article>
+              <article class="stat-card"><span class="stat-icon blue">◎</span><div><strong id="memberCount">18</strong><span data-i18n="members">名成員</span></div></article>
               <article class="stat-card"><span class="stat-icon green">↗</span><div><strong>72%</strong><span data-i18n="responseRate">今月回覆率</span></div></article>
               <article class="stat-card"><span class="stat-icon violet">#</span><div><strong>24</strong><span data-i18n="messagesThisWeek">本週訊息</span></div></article>
             </div>
@@ -209,7 +249,7 @@
               </div>
               <div id="memberList" class="member-list"></div>
             </section>
-            <section class="panel prototype-settings">
+            <section class="panel prototype-settings" id="prototypeSettings">
               <div><p class="eyebrow">PROTOTYPE SETTINGS</p><h3 data-i18n="demoControls">Demo控制</h3><p data-i18n="resetCopy">重設所有本機示範資料，包括新增活動及訊息。</p></div>
               <button class="danger-button" data-action="reset-demo" data-i18n="resetDemo">重設Demo</button>
             </section>
@@ -256,7 +296,19 @@
       </section>
     </div>
 
+    <div class="modal-backdrop" id="inviteModalBackdrop" hidden>
+      <section class="modal invite-modal" role="dialog" aria-modal="true" aria-labelledby="inviteModalTitle">
+        <div class="modal-header"><div><p class="eyebrow">TEAM INVITATION</p><h2 id="inviteModalTitle">邀請隊員</h2></div><button class="icon-button" type="button" data-action="close-invite">×</button></div>
+        <p class="modal-copy">將以下連結傳畀隊友。佢登入後就會自動加入球隊；連結七日後失效。</p>
+        <label class="invite-link-field"><span>邀請連結</span><input id="inviteLinkInput" readonly /></label>
+        <div class="form-actions"><button class="secondary-button" type="button" data-action="close-invite">關閉</button><button class="primary-button" type="button" data-action="copy-current-invite">複製連結</button></div>
+      </section>
+    </div>
+
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./supabase-config.js"></script>
+    <script src="./backend.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>
